@@ -1,0 +1,847 @@
+----노션----
+https://incredible-guan-388.notion.site/Spring-Data-JPA-6e60e8d422e14bf0adf989aef8ae9331?pvs=74
+
+
+## *왜 JPA를 학습해야 하는가?*
+
+- 도메인 주도 개발이 가능합니다.
+    - 애플리케이션의 코드가 SQL 데이터베이스 관련 코드에 잠식 당하는 것을 방지하고 도메인 기반의 프로그래밍으로 비즈니스 로직을 구현하는데 집중할 수 있습니다.
+- 그리고 개발 생산성에 좋으며, 데이터베이스에 독립적인 프로그래밍이 가능하고, 타입 세이프한 쿼리 작성 그리고 Persistent Context가 제공하는 캐시 기능으로 성능 최적화까지 가능합니다.
+
+### ORM: Object-Relation Mapping
+
+### JDBC 대신 도메인 모델 사용하려는 이유?
+
+- 객체 지향 프로그래밍의 장점을 활용하기 좋으니까.
+- 각종 디자인 패턴
+- 코드 재사용
+- 비즈니스 로직 구현 및 테스트 편함
+
+ORM은 애플리케이션의 클래스와 SQL 데이터베이스의 테이블 사이의 맵핑 정보를 기술한 메타데이터를 사용하여, 자바 애플리케이션의 객체를 SQL 데이터베이스의 테이블에 자동으로 (또 깨끗하게) 영속화 해주는 기술입니다.
+
+### SQL을 직접 다룰 때 발생하는 문제점
+
+**반복 작업**
+
+- 새로운 필드가 추가되면 관련된 SQL을 다 수정해야 한다.
+
+```java
+class Station {
+    Long id;
+    String name;
+}
+```
+
+```sql
+INSERT INTO station(`id`, `name`) VALUES ...
+SELECT `id`, `name` FROM station
+UPDATE station SET ...
+
+```
+
+**신뢰성**
+
+- 개발자들이 엔티티를 신뢰하고 사용할 수 없다.
+
+```java
+class LineService {
+    private LineRepository lines;
+    
+    public class LineService(LineRepository lines) {
+        this.lines = lines;
+    }
+    
+    public void findLineWithStationsById(Long id) {
+        Line line = lines.findById(id);
+        line.getLineStation()
+                .stream()
+                .map(LineStation::getStation)
+                .collect(Collectors.toList()); // ?
+    }
+}
+```
+
+## *내용*
+
+[JPA](https://www.notion.so/Spring-Data-JPA-6e60e8d422e14bf0adf989aef8ae9331?pvs=21)
+
+[Spring Data JPA](https://www.notion.so/Spring-Data-JPA-6e60e8d422e14bf0adf989aef8ae9331?pvs=21)
+
+[영속성 컨텍스트](https://www.notion.so/Spring-Data-JPA-6e60e8d422e14bf0adf989aef8ae9331?pvs=21)
+
+[연관관계](https://www.notion.so/Spring-Data-JPA-6e60e8d422e14bf0adf989aef8ae9331?pvs=21)
+
+### JPA
+
+### 데이터베이스 스키마 자동 생성
+
+- **`schema.sql`**?
+- JPA는 데이터베이스 스키마를 자동으로 생성하는 기능을 지원한다.
+- 아래 속성을 추가하면 애플리케이션 실행 시점에 데이터베이스 테이블을 자동으로 생성한다.
+    - **`spring.jpa.hibernate.ddl-auto=create`**
+
+```
+create: 기존 테이블 삭제 후 다시 생성 (DROP + CREATE)
+create-drop: create와 같으나 종료시점에 테이블 DROP
+update: 변경된 부분만 반영 (운영 DB에 사용하면 안됌)
+validate: entity와 table이 정상 매핑되었는지만 확인
+none: 사용하지 않음
+```
+
+```java
+@Entity // (1)
+@Table(name = "station") // (2)
+public class Station {
+    @Id // (3)
+		@GeneratedValue(strategy = GenerationType.IDENTITY) // (4)
+		private Long id;
+
+    @Column(name = "name", nullable = false) // (5)
+		private String name;
+    
+    protected Station() { // (6)
+    }
+}
+
+```
+
+1. **`@Entity`**
+    - 엔티티 클래스임을 지정하며 테이블과 매핑된다.
+2. **`@Table`**
+    - 엔티티가 매핑될 테이블을 지정하고 생략 시 엔티티 클래스 이름과 같은 테이블로 매핑된다.
+    - 굳이 선언하지 않아도 된다.
+3. **`@Id`**
+    - 직접 매핑해서 사용하는 경우
+4. **`@GeneratedValue`**
+    - PK의 생성 규칙을 나타낸다.
+5. **`@Column`**
+    - 컬럼의 이름을 이용하여 지정된 필드나 속성을 테이블의 컬럼에 매핑한다.
+    - 굳이 선언하지 않아도 된다.
+6. 매개 변수가 없는 생성자
+    - The entity class must have a no-arg constructor. The entity class may have other constructors as well. - JSR 338
+
+### Spring Data JPA
+
+### Spring Data JPA를 쓰기 전
+
+- 또다시 반복 작업
+
+```java
+class StationRepository {
+    void save(Station station) {...}
+    Station findById(Long id) {...}
+    List<Station> findAll() {...}
+    Station findByName(String name) {...}
+}
+```
+
+### Spring Data JPA
+
+```java
+interface StationRepository extends JpaRepository<Station, String> {
+    Station findByName(String name); // (1)
+}
+```
+
+**메서드 이름으로 쿼리 생성**
+
+- [Appendix C: Repository query keywords](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repository-query-keywords)
+
+### 영속성 컨텍스트
+
+- 엔티티를 영구 저장하는 환경
+- 엔티티 매니저로 엔티티를 저장하거나 조회하면 엔티티 매니저는 영속성 컨텍스트에 엔티티를 보관하고 관리한다.
+
+```
+- 1차 캐시
+- 동일성 보장
+- 트랜잭션을 지원하는 쓰기 지연
+- 변경 감지
+- 지연 로딩
+```
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/33a17efb-a721-48f5-a5c3-488d41224aba/Untitled.png
+
+### 엔티티의 생명주기
+
+- 비영속(new/transient): 영속성 컨텍스트와 전혀 관계가 없는 상태
+- 영속(managed): 영속성 컨텍스트에 저장된 상태
+- 준영속(detached): 영속성 컨텍스트에 저장되었다가 분리된 상태
+- 삭제(removed): 삭제된 상태
+
+!https://www.objectdb.com/files/images/manual/jpa-states.png
+
+### @Transactional
+
+- 트랜잭션을 커밋하는 순간 영속성 컨텍스트를 데이터베이스에 반영
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/9b67ff6b-e9fa-48f6-b1a6-950495940605/Untitled.png
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/8136575d-6e5c-403d-a400-8ac9e5583941/Untitled.png
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/002a3fb6-330b-4083-8cab-ae0dc3462f24/Untitled.png
+
+### **스냅샷**
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/0e371cf3-6000-486a-a78c-a000462deb45/Untitled.png
+
+### 연관 관계
+
+- 엔티티들은 대부분 다른 엔티티와 연관 관계가 있다.
+- 객체는 참조(주소)를 사용해서 관계를 맺고 테이블은 외래 키를 사용해서 관계를 맺는다.
+
+### 핵심 키워드
+
+- 방향: 단방향, 양방향이 있다.방향은 객체 관계에만 존재하고 테이블 관계는 항상 양방향이다.
+- 다중성: 다대일(N:1), 일대다(1:N), 일대일(1:1), 다대다(N:M)
+- 연관 관계의 주인: 객체를 양방향 연관 관계로 만들면 연관 관계의 주인을 정해야 한다.
+
+### 다대일, 일대다 연관 관계
+
+- 역과 노선이 있다.
+- 지하철역은 하나의 노선에만 소속될 수 있다.
+    - **환승역은 고려하지 않는다.**
+- **지하철역과 노선은 다대일(N:1) 관계다.**
+- **노선과 지하철역은 일대다(1:N) 관계다.**
+
+```java
+class Line {
+    Long id;
+    String name;
+}
+
+class Station {
+    Long id;
+    String name;
+}
+```
+
+### 다대일 단방향 연관 관계
+
+```java
+@Entity
+@Table(name = "line")
+public class Line {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String name;
+    
+    ...
+
+}
+```
+
+```java
+@Entity
+@Table(name = "station")
+public class Station {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+    
+    @ManyToOne // (1)
+		@JoinColumn(name = "line_id") // (2)
+		private Line line; // (3)
+    
+    public void setLine(final Line line) { // (4)
+				this.line = line;
+    }
+    
+    ...
+
+}
+```
+
+1. **`@ManyToOne`**
+    - 다대일(N:1) 관계라는 매핑 정보
+2. **`@JoinColumn`**
+    - 컬럼 이름과 외래 키가 참조할 컬럼을 직접 지정하지 않는다면 굳이 선언하지 않아도 된다.
+3. 지하철역 객체는 **`line`** 필드로 노선 객체와 연관 관계를 맺는다.
+    - **`Station` -> `Line`: 가능**
+    - **`Line` -> `Station`: 불가능**
+    - **`station`** -> **`line`**: 가능
+    - **`line`** -> **`station`**: 가능
+    - **지하철역과 노선은 단방향 관계다.**
+4. 연관 관계를 설정하는 메서드
+
+### 양방향 연관 관계
+
+- 반대 방향으로 객체 그래프 탐색이 가능하다.
+
+```java
+@Entity
+@Table(name = "line")
+public class Line {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String name;
+
+    @OneToMany(mappedBy = "line") // (1)
+		private List<Station> stations = new ArrayList<>(); // (2)
+    
+    ...
+
+}
+```
+
+1. **`@OneToMany`**
+    - 일대다(1:N) 관계라는 매핑 정보
+    - **`mappedBy`** 속성은 연관 관계 주인의 필드 이름
+2. 노선 객체는 **`stations`** 필드로 지하철역 객체와 연관 관계를 맺는다.
+    - **`Station` -> `Line`: 가능**
+    - **`Line` -> `Station`: 가능**
+    - **`station`** -> **`line`**: 가능
+    - **`line`** -> **`station`**: 가능
+    - **지하철역과 노선은 양방향 관계다.**
+
+### 연관 관계의 주인
+
+- 엄밀히 이야기하면 객체에는 양방향 연관 관계라는 것이 없다.
+- 서로 다른 단방향 연관 관계 2개를 양방향인 것처럼 보이게 할 뿐이다.
+    - **지하철역과 노선은 다대일(N:1) 관계다.**
+    - **노선과 지하철역은 일대다(1:N) 관계다.**
+- **연관 관계의 주인만이 데이터베이스 연관 관계와 매핑되고 외래 키를 등록, 수정, 삭제할 수 있다.**
+- **주인이 아닌 쪽은 읽기만 할 수 있다.**
+
+> 연관 관계의 주인을 정한다는 것은 외래 키 관리자를 선택하는 것이다. 비즈니스 중요도로 접근하면 안 된다.
+> 
+
+> 데이터베이스 테이블의 다대일, 일대다 관계에서는 항상 다 쪽이 외래 키를 가진다.
+> 
+
+### 연관 관계 편의 메서드
+
+- 양방향 연관 관계는 결국 양쪽 다 신경 써야 한다.
+
+```java
+station.setLine(line);
+line.addStation(station);
+```
+
+- 양방향 관계에서 두 코드는 하나인 것처럼 사용하는 것이 안전하다.
+- 한 번에 양방향 관계를 설정하는 메서드를 **연관 관계 편의 메서드**라 한다.
+
+```java
+public void setLine(Line line) {
+    this.line = line;
+    line.getStations().add(this);
+}
+```
+
+```java
+public void addStation(Station station) {
+    stations.add(station);
+    station.setLine(this);
+}
+
+```
+
+> 양방향 매핑 시에는 무한 루프에 빠지지 않게 조심해야 한다.
+> 
+
+### 연관 관계 편의 메서드 작성 시 주의 사항
+
+```java
+station.setLine(line1);
+station.setLine(line2);
+boolean contains = line1.getStations().contains(station); // true
+```
+
+```java
+public void setLine(Line line) {
+    if (Objects.nonNull(this.line) {
+        this.line.getStations().remove(this);
+    }
+    this.line = line;
+    line.getStations().add(this);
+}
+
+```
+
+### 일대다 단방향 연관 관계
+
+```java
+@Entity
+public class Favorite {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    protected Favorite() {
+    }
+}
+
+```
+
+```java
+@Entity
+public class Member {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+
+    @OneToMany // (1)
+		@JoinColumn(name = "member_id") // (2)
+		private List<Favorite> favorites = new ArrayList<>(); // (3)
+
+    ...
+
+}
+
+```
+
+1. **`@OneToMany`**
+    - 일대다(1:N) 관계라는 매핑 정보
+2. **`@JoinColumn`**
+    - **`favorite`의 외래 키**
+3. 사용자 객체는 **`favorites`** 필드로 지하철역 객체와 연관 관계를 맺는다.
+    - **`Member` -> `Favorite`: 가능**
+    - **`Favorite` -> `Member`: 불가능**
+    - **`member`** -> **`favorite`**: 가능
+    - **`favorite`** -> **`member`**: 가능
+    - **사용자와 즐겨찾기는 단방향 관계다.**
+
+### 일대다 단방향 매핑의 단점
+
+- 매핑한 객체가 관리하는 외래 키가 다른 테이블에 있다.
+- 연관 관계 처리를 위한 UPDATE SQL을 추가로 실행해야 한다.
+- **일대다 단방향 매핑보다는 다대일 양방향 매핑을 권장한다.**
+
+### 일대일 연관 관계
+
+- 일대일 관계는 그 반대도 일대일 관계다.
+- 일대일 관계는 주 테이블이나 대상 테이블 둘 중 어느 곳이나 외래 키를 가질 수 있기 때문에 **외래 키를 어느 곳에 두어야 하는지 고민을 해야 한다.**
+    - **`station`**이 주 테이블이고 **`line_station`**이 대상 테이블이라고 가정한다.
+
+```java
+class Station {
+    Long id;
+    String name;
+    LineStation lineStation;
+}
+
+class LineStation {
+    Long id;
+}
+```
+
+### 주 테이블에 외래 키
+
+- 주 테이블이 외래 키를 가지고 있으므로 주 테이블만 확인해도 대상 테이블과 연관 관계가 있는지 알 수 있다.
+    - **`Station` -> `LineStation`: 가능**
+
+### 단방향 연관 관계
+
+```java
+@Entity
+@Table(name = "line_station")
+public class LineStation {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+		@JoinColumn(name = "line_id")
+    private Line line;
+    
+    ...
+
+}
+
+```
+
+```java
+@Entity
+@Table(name = "station")
+public class Station {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @OneToOne // (1)
+		@JoinColumn(name = "line_station_id") // (2)
+		private LineStation lineStation; // (3)
+    
+    ...
+
+}
+```
+
+1. **`@OneToOne`**
+    - 일대일(1:1) 관계라는 매핑 정보
+2. **`@JoinColumn`**
+    - 컬럼 이름과 외래 키가 참조할 컬럼을 직접 지정하지 않는다면 굳이 선언하지 않아도 된다.
+3. 지하철역 객체는 **`lineStation`** 필드로 노선의 지하철역 객체와 연관 관계를 맺는다.
+    - **`Station` -> `LineStation`: 가능**
+    - **`LineStation` -> `Station`: 불가능**
+    - **`station`** -> **`line_station`**: 가능
+    - **`liline_stationne`** -> **`station`**: 가능
+
+### 양방향 연관 관계
+
+```java
+@Entity
+@Table(name = "line_station")
+public class LineStation {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+		@JoinColumn(name = "line_id")
+    private Line line;
+    
+    @OneToOne(mappedBy = "lineStation") // (1)
+		private Station station; // (2)
+    
+    ...
+
+}
+```
+
+1. **`@OneToOne`**
+    - 일대일(1:1) 관계라는 매핑 정보
+    - **`mappedBy`** 속성은 연관 관계 주인의 필드 이름
+2. 노선의 지하철역 객체는 **`station`** 필드로 지하철역 객체와 연관 관계를 맺는다.
+    - **`Station` -> `LineStation`: 가능**
+    - **`LineStation` -> `Station`: 가능**
+    - **`station`** -> **`line_station`**: 가능
+    - **`line_station`** -> **`station`**: 가능
+
+### 대상 테이블에 외래 키
+
+- 테이블 관계를 일대일에서 일대다로 변경할 때 테이블 구조를 그대로 유지할 수 있다.
+    - **환승역을 고려해 본다.**
+
+### 단방향 연관 관계
+
+- **이런 모양으로 매핑할 수 있는 방법이 없다.**
+    - **`Station` -> `LineStation`: 불가능**
+    - **`LineStation` -> `Station`: 불가능**
+
+### 양방향 연관 관계
+
+```java
+@Entity
+@Table(name = "line_station")
+public class LineStation {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+		@JoinColumn(name = "line_id")
+    private Line line;
+    
+    @OneToOne
+		@JoinColumn(name = "station_id")
+    private Station station;
+    
+    ...
+
+}
+
+```
+
+```java
+@Entity
+@Table(name = "station")
+public class Station {
+    @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @OneToOne(mappedBy = "station")
+    private LineStation lineStation;
+    
+    ...
+
+}
+```
+
+### 다대다 연관 관계
+
+- 관계형 데이터베이스는 정규화된 테이블 2개로 다대다 관계를 표현할 수 없다.
+- 보통 다대다 관계를 일대다, 다대일 관계로 풀어내는 연결 테이블을 사용한다.
+- **연결 테이블에 필드가 추가되면 더는 사용할 수 없다.**
+
+## *문법*
+
+```java
+@Entity
+@Table
+
+@Id @GeneratedValue
+@Column(name = "order_id")
+private Long id;
+
+@ManyToOne
+@JoinColumn(name = "MEMBER_ID")
+private Member member;      //주문 회원
+
+@OneToMany(mappedBy = "order")
+private List<OrderItem> orderItems = new ArrayList<OrderItem>();
+
+@Enumerated(EnumType.STRING) // enum을 사용
+private OrderStatus status;
+
+@DataJpaTest
+```
+
+## *N+1 문제 및 해결방안*
+
+```java
+@Entity
+@Getter
+@NoArgsConstructor
+public class Academy {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String name;
+
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name="academy_id")
+    private List<Subject> subjects = new ArrayList<>();
+
+    @Builder
+    public Academy(String name, List<Subject> subjects) {
+        this.name = name;
+        if(subjects != null){
+            this.subjects = subjects;
+        }
+    }
+
+    public void addSubject(Subject subject){
+        this.subjects.add(subject);
+        subject.updateAcademy(this);
+    }
+}
+```
+
+```java
+@Entity
+@Getter
+@NoArgsConstructor
+public class Subject {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "academy_id", foreignKey = @ForeignKey(name = "FK_SUBJECT_ACADEMY"))
+    private Academy academy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id", foreignKey = @ForeignKey(name = "FK_SUBJECT_TEACHER"))
+    private Teacher teacher;
+
+    @Builder
+    public Subject(String name, Academy academy, Teacher teacher) {
+        this.name = name;
+        this.academy = academy;
+        this.teacher = teacher;
+    }
+
+    public void updateAcademy(Academy academy){
+        this.academy = academy;
+    }
+}
+```
+
+```java
+@Entity
+@Getter
+@NoArgsConstructor
+public class Teacher {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String name;
+
+    public Teacher(String name) {
+        this.name = name;
+    }
+}
+```
+
+academy **전체 조회하는 쿼리**와 각각의 Academy가 본인들의 subject를 조회하는 쿼리가 실행
+
+- 이렇게 하위 엔티티들을 첫 쿼리 실행시 한번에 가져오지 않고, Lazy Loading으로 필요한 곳에서 사용되어 쿼리가 실행될때 발생하는 문제가 N+1 쿼리 문제
+- 지금은 Academy가 10개이니 첫조회(1) + 10개의 Academy의 subject 조회(10) = 11 밖에 발생하지 않았지만, 만약 Academy 조회 결과가 10만개면 어떻게 될까?
+**한번의 서비스 로직 실행에서 DB 조회가 10만번**
+
+### 1. Join Fetch
+
+```java
+/**
+* Academy + Subject + Teacher를 join fetch로 조회
+*/
+@Query("select a from Academy a join fetch a.subjects s join fetch s.teacher")
+List<Academy> findAllWithTeacher();
+```
+
+- **불필요한 쿼리문이 추가되는 단점**이 있음
+
+### 2. @EntityGraph
+
+```java
+/**
+* Academy + Subject + Teacher를 @EntityGraph 로 조회
+*/
+@EntityGraph(attributePaths = {"subjects", "subjects.teacher"})
+@Query("select a from Academy a")
+List<Academy> findAllEntityGraphWithTeacher();
+```
+
+**JoinFetch는 Inner Join, Entity Graph는 Outer Join**이라는 차이점
+
+공통적으로 **카테시안 곱(Cartesian Product)이 발생하여 Subject의 수만큼 Academy가 중복 발생**
+
+### 해결방안
+
+1. 하나는 일대다 필드의 타입을 `Set`으로 선언
+    
+    ```java
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name="academy_id")
+    private Set<Subject> subjects = new LinkedHashSet<>();
+    ```
+    
+2. `distinct`를 사용하여 중복을 제거
+    
+    ```java
+    @Query("select DISTINCT a from Academy a join fetch a.subjects s join fetch s.teacher")
+    List<Academy> findAllWithTeacher();
+    ```
+    
+    ```java
+    @EntityGraph(attributePaths = {"subjects", "subjects.teacher"})
+    @Query("select DISTINCT a from Academy a")
+    List<Academy> findAllEntityGraphWithTeacher();
+    ```
+    
+
+[JPA N+1 문제 및 해결방안](https://jojoldu.tistory.com/165)
+
+## *피드백*
+
+### Auditing
+
+애플리케이션의 엔티티의 생성 시간과 마지막 수정 시간을 관리할 필요가 있다면 수동으로 매번 추가하는 대신 Auditing 기능을 이용하여 자동으로 추가해 줄 수 있다.
+
+- `@Configuration` 클래스에 `@EnableJpaAuditing`을 추가한다.
+
+```java
+@EnableJpaAuditing
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+```
+
+- 엔티티에 콜백 리스너를 추가한다.
+- 생성 날짜와 마지막 수정 날짜 프로퍼티에 `@CreatedDate`와 `@LastModifiedDate`를 추가한다.
+
+```java
+@EntityListeners(AuditingEntityListener.class)
+@Entity
+public class Line {
+    @CreatedDate
+    private LocalDateTime createdDate;
+
+    @LastModifiedDate
+    private LocalDateTime modifiedDate;
+    
+    ...
+
+}
+```
+
+### @MappedSuperclass
+
+**`@MappedSuperclass`**를 사용하여 중복 코드를 분리할 수 있다.
+
+```java
+@EntityListeners(AuditingEntityListener.class)
+@MappedSuperclass
+public abstract class BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @CreatedDate
+    private LocalDateTime createdDate;
+
+    @LastModifiedDate
+    private LocalDateTime modifiedDate;
+    
+    ...
+
+}
+
+public class Line extends BaseEntity {
+```
+
+- BaseEntity는 직접 생성해서 사용하는 경우가 없으므로 추상 클래스로 만든다.
+
+### 엔티티 비교
+
+- 엔티티의 **`equals()`**와 **`hashCode()`**를 구현할 때는 엔티티의 식별자만 있어도 충분하다.
+
+### @ManyToOne vs @OneToOne
+
+- 생성되는 DDL은 똑같을 수 있다.
+- 관념적으로 차이가 발생한다.
+- [Hibernate ManyToOne vs OneToOne](https://stackoverflow.com/questions/18460469/hibernate-manytoone-vs-onetoone)
+
+## *QueryDSL*
+
+### JPAQueryFactory
+
+### 동적쿼리
+
+- BooleanExpression
+    - null 반환시 자동으로 조건절에서 제거된다.
+- exist 메소드 금지
+    
+    ```java
+    @Transactional(readOnly = true)
+    public Boolean exist(Long bookId) {
+    		Integer fetchOne = queryFactory
+    					.selectOne()
+    					.from(book)
+    					.where(book.id.eq(bookId))
+    					.fetchFirst();
+    
+    		return fetchOne != null;
+    }
+    ```
+    
+- Cross Join 회피
+    -
