@@ -1,0 +1,257 @@
+--노션--
+https://incredible-guan-388.notion.site/Spring-1-57ba1932e124417ebcf34f89a5bdf798
+
+
+## *Web Framework*
+
+### **자바 엔터프라이즈 개발을 편하게 해주는 오픈소스 경량급 애플리케이션 프레임워크**
+
+핵심 기술에 담긴 프로그래밍 모델을 일관되게 적용해서 엔터프라이즈 어플리케이션 전 계층과 전 영역에 전략과 기능을 제공해줌으로써 어플리케이션을 편리하게 개발하게 해주는 어플리케이션 프레임워크
+
+- 애플리케이션 기본 틀 - 스프링 컨테이너
+- 공통 프로그래밍 모델 - IoC/DI, 서비스 추상화, AOP
+- 기술 API
+
+스프링을 사용한다는 것은 바로 이 세 가지 요소를 적극적으로 활용해서 애플리케이션을 개발한다는 뜻
+
+클래스는 스프링 컨테이너 위에서 오브젝트로 만들어져 동작하게 만들고, 코드는 스프링의 프로그래밍 모델을 따라서 작성하고, 엔터프라이즈 기술을 사용할 때는 스프링이 제공하는 기술 API와 서비스를 활용하다록 해주면 된다.
+
+## *Spring의 목적*
+
+웹 애플리케이션을 개발하는 과정에서 겪는 반복 작업을 줄이는 것이 주 목적
+
+## *Spring Framework Ecosystem*
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/38322191-c29c-48c3-b449-50f9dc96b432/spring-ecosystem.jpg
+
+[Spring Boot](https://www.notion.so/Spring-Boot-9a815e4f02bc4231abb6e4426e94d2ab?pvs=21)
+
+[Spring Security](https://www.notion.so/Spring-Security-a7a0474542a74296b93de6a2c9c39e3c?pvs=21)
+
+[Spring Cloud Gateway](https://www.notion.so/Spring-Cloud-Gateway-5431d92e7b4a441d9ce36996af421a7f?pvs=21)
+
+[Spring Data JPA](https://www.notion.so/Spring-Data-JPA-6e60e8d422e14bf0adf989aef8ae9331?pvs=21)
+
+[Spring Batch](https://www.notion.so/Spring-Batch-e609e8e7fc9349ec972cf55e4cc10cff?pvs=21)
+
+[Spring Data JDBC](https://www.notion.so/Spring-Data-JDBC-47b061b7756f4159a3a85c925471076c?pvs=21)
+
+[Spring Reactive](https://www.notion.so/Spring-Reactive-90f1d8195ce54518948b18da806b8001?pvs=21)
+
+## *Spring Framework*
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/2ab7cdb1-4ae5-4fb4-bfc1-dcbfd3c6cf8c/spring-overview.png
+
+- 스프링 모듈 사용 시 기본으로 필요한 **Spring Core**
+- 클라이언트의 요청을 받고 응답 할 때 필요한 **Spring MVC**
+- Database 연동 및 편리한 사용을 위한 **Spring Data Jdbc**
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/312f8050-4ad1-4d67-938c-02d588e060a0/2020-03-25T00_54_35.897image.png
+
+## *Spring MVC*
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/6faedc39-a5ae-4093-a308-9466bc1f8bd5/Untitled.png
+
+![기존의 Servlet](https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/2743116e-7047-4560-993d-8a345946c325/Screen_Shot_2020-07-11_at_7.04.51_PM.png)
+
+기존의 Servlet
+
+![FrontController 적용(DispatcherServlet)](https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/9b396628-95bc-46e8-8616-8f0254b31c71/Screen_Shot_2020-07-11_at_7.04.59_PM.png)
+
+FrontController 적용(DispatcherServlet)
+
+### DispatcherServlet
+
+모든 요청을 한곳에서 받아서 필요한 처리를 한 후, 요청에 맞는 `Handler`로 요청을 dispatch하고 해당 `Handler`의 실행 결과를 `HttpResponse`형태로 만듦
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/89833555-8e23-49ef-bc6c-6833bd4461d2/Screen_Shot_2020-07-11_at_7.09.30_PM.png
+
+`DispatcherServlet`은 `ContextLoaderListener`에 의해 `ServletContext`에 등록된 `ApplicationContext`를 상속받아 `WebApplicationContext`를 생성한다.
+위 그림의 `Root WebApplicationContext`가 그것을 상속받아 `DispatcherServlet`에서 자동으로 만든 `ApplicationContext`
+
+- **Root WebApplicationContext**
+    
+    모든 Servlet이 사용 가능
+    
+- **Servlet WebApplicationContext**
+    
+    해당 DispatcherServlet에서만 사용 가능
+    
+
+[SpringMVC - Spring MVC 동작원리 - 1 (Servlet의 Listener와 Filter)](https://galid1.tistory.com/521?category=783055)
+
+## *Filter vs Interceptor*
+
+https://mangkyu.tistory.com/173
+
+### **Spring Request Life Cycle**
+
+- Request : User > Filter > DispatcherServlet > Interceptor > Controller
+- Response : Controller > Interceptor > DispatcherServlet > Filter > User
+
+### **Filter와 Interceptor의 공통점**
+
+- 요청에 대한 전, 후처리가 가능
+
+### **Filter와 Interceptor의 차이**
+
+![다운로드 (1).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/6a11f790-a894-4103-8402-6501bccc07e0/%E1%84%83%E1%85%A1%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%85%E1%85%A9%E1%84%83%E1%85%B3_(1).png)
+
+- Filter
+    - 주로 요청 파라미터 자체의 검증 및 처리를 담당
+        - 공통된 보안 및 인증/인가 관련 작업
+        - 모든 요청에 대한 로깅 또는 감사
+        - encoding 처리
+        - Spring과 분리되어야 하는 기능
+        - xss 방어 처리 (네이버 lucy-xss-filter 많이 사용하는듯?)
+    - 예외 발생시 web.xml에서 정의한 페이지로 처리해야함
+
+필터에서는 기본적으로 스프링과 무관하게 전역적으로 처리해야 하는 작업들을 처리할 수 있다. 
+
+대표적으로 보안 공통 작업이 있다. 필터는 인터셉터보다 앞단에서 동작하므로 전역적으로 해야하는 보안 검사(XSS 방어 등)를 하여 올바른 요청이 아닐 경우 차단을 할 수 있다. 
+
+그러면 스프링 컨테이너까지 요청이 전달되지 못하고 차단되므로 안정성을 더욱 높일 수 있다. 
+
+또한 필터는 이미지나 데이터의 압축이나 문자열 인코딩과 같이 웹 애플리케이션에 전반적으로 사용되는 기능을 구현하기에 적당하다.
+
+Filter는 다음 체인으로 넘기는 ServletRequest/ServletResponse 객체를 조작할 수 있다는 점에서 Interceptor보다 훨씬 강력한 기술이다.
+
+- Interceptor
+    - 주로 서비스 로직을 활용하여 요청 정보 정합성 처리를 담당
+        - 세부적인 보안 및 인증/인가 공통 작업
+        - API 호출에 대한 로깅 또는 감사
+        - Controller로 넘겨주는 정보(데이터)의 가공
+        - 로그인 체크
+        - 권한 체크
+    - 예외 발생시 ControllerAdvice, ExceptionHandler에서 처리 가능
+
+인터셉터에서는 클라이언트의 요청과 관련되어 전역적으로 처리해야 하는 작업들을 처리할 수 있다. 
+
+대표적으로 세부적으로 적용해야 하는 인증이나 인가와 같이 클라이언트 요청과 관련된 작업 등이 있다. 예를 들어 특정 그룹의 사용자는 어떤 기능을 사용하지 못하는 경우가 있는데, 이러한 작업들은 컨트롤러로 넘어가기 전에 검사해야 하므로 인터셉터가 처리하기에 적합하다.
+
+또한 인터셉터는 필터와 다르게 HttpServletRequest나 HttpServletResponse 등과 같은 객체를 제공받으므로 객체 자체를 조작할 수는 없다. 대신 해당 객체가 내부적으로 갖는 값은 조작할 수 있으므로 컨트롤러로 넘겨주기 위한 정보를 가공하기에 용이하다. 예를 들어 사용자의 ID를 기반으로 조회한 사용자 정보를 HttpServletRequest에 넣어줄 수 있다. 
+
+그 외에도 우리는 다양한 목적으로 API 호출에 대한 정보들을 기록해야 할 수 있다. 이러한 경우에 HttpServletRequest나 HttpServletResponse를 제공해주는 인터셉터는 클라이언트의 IP나 요청 정보들을 포함해 기록하기에 용이하다.
+
+1. **예외처리**
+
+Filter에서 예외가 발생하면 Web Application에서 처리해야 한다. tomcat을 사용한다면 `<error-page>`를 잘 선언하든가 아니면 Filter 내에서 예외를 잡아 `request.getRequestDispatcher(String)`으로 마치 핑퐁 하듯이 예외 처리를 미뤄야 한다. 
+
+하지만 Interceptor에서 예외가 발생하면? Interceptor의 실행 시점을 보자, Spring의 ServletDispatcher 내에 있다. 즉 `@ControllerAdvice`에서 `@ExceptionHandler`를 사용해서 예외를 처리를 할 수 있다.
+
+1. **Interceptor에서만 할 수 있는 것**
+- AOP 흉내를 낼 수 있다. `@RequestMapping` 선언으로 요청에 대한 `HandlerMethod(@Controller의 메서드)`가 정해졌다면, handler라는 이름으로 `HandlerMethod`가 들어온다. `HandlerMethod`로 메서드 시그니처 등 추가적인 정보를 파악해서 로직 실행 여부를 판단할 수 있다.
+- View를 렌더링하기 전에 추가 작업을 할 수 있다. 예를 들어 웹 페이지가 권한에 따라 GNB(Global Navigation Bar)이 항목이 다르게 노출되어야 할 때 등의 처리를 하기 좋다.
+
+1. **Filter에서만 할 수 있는 것**
+
+Filter는 Request와 Response를 조작할 수 있지만 Interceptor는 조작할 수 없다. 여기서 조작한다는 것은 내부 상태를 변경한다는 것이 아니라 다른 객체로 바꿔친다는 의미이다. 아래와 같은 일이 가능하다.
+
+```java
+public class SomeFilter implements Filter {
+  //...
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
+    chain.doFilter(new CustomServletRequest(), new CustomResponse());
+  }
+}
+```
+
+설마 저런 일을 할까? 꽤 자주 있는 요구 사항이다. HttpServletRequest의 body(ServletInputStream의 내용)를 로깅하는 것을 예로 들 수 있을 것 같다. 
+
+`HttpServletRequest`는 body의 내용을 한 번만 읽을 수 있다. Rest API Application을 작성할 때, 흔히 json 형식으로 요청을 받는다. 
+
+`@Controller(Handler)`에 요청이 들어오면서 body를 한 번 읽게 된다. 때문에 Filter나 Interceptor에서는 body를 읽을 수 없다. `IOException`이 발생한다. 
+
+body를 로깅하기 위해서는 `HttpServletRequest`를 감싸서 여러 번 inputStream을 열 수 있도록 커스터마이징 된 `ServletRequest`를 쓸 수밖에 없다.
+
+```java
+public class SomeFilter implements Filter {
+  //...
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
+    chain.doFilter(new BodyCachedServletRequestWrapper(request), response);
+  }
+}
+```
+
+### 필터(Filter)가 스프링 빈 등록과 주입이 가능한 이유
+
+https://mangkyu.tistory.com/221
+
+**필터(Filter)는 스프링 빈으로 등록이 불가능했다!**
+
+몇몇 포스팅과 예전 책들을 보면 필터(Filter)는 서블릿 기술이라서 Spring의 빈으로 등록할 수 없다는 내용이 나온다. 개인적으로 너무 좋아하고 많이 배운 '토비의 스프링'이라는 책에는 다음과 같은 내용이 적혀있다. 또한 필터는 J2EE표준 스펙 기능이지만 인터셉터는 스프링 프레임워크가 제공하는 기술이므로 필터와 달리 인터셉터는 스프링 빈으로 등록 가능하다.
+
+우선 위의 내용의 진위 여부를 살펴보기 전에 필터와 스프링 간의 관계부터 살펴보도록 하자. 서블릿 스펙의 기술인 필터는 스프링 범위 밖인 서블릿 범위에서 관리되는데, 이를 그림으로 표현하면 다음과 같다. (실제로는 Interceptor가 Controller로 요청을 위임하지는 않는다. 아래의 그림은 처리 순서를 도식화한 것으로만 이해하면 된다. 자세한 내용은디스패처 서블릿 포스팅을 참고하도록 하자.)
+
+![다운로드.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/b5fccdcc-30ef-4c33-91c9-0fc4d324e196/%E1%84%83%E1%85%A1%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%85%E1%85%A9%E1%84%83%E1%85%B3.png)
+
+상식적으로 스프링 컨테이너보다 큰 범위인 서블릿 컨테이너의 필터가 스프링 컨테이너에 의해 관리된다는 것은 이상하다.하지만 테스트를 해보면 필터 역시 스프링 빈으로 등록이 가능하며, 빈을 주입받을 수도 있는 것을 확인할 수 있다. 
+
+이러한 잘못된 설명이 나오는 이유는 과거에 실제로 필터(Filter)가 스프링 컨테이너에 의해 관리되지 않았기 때문이다. 
+
+그래서 필터를 빈으로 등록할 수도 없고, 다른 빈을 주입받을 수도 없었다. 하지만 DelegatingFilterProxy가 등장하면서 이제 이러한 설명은 더이상 유효하지 않은데, 해당 내용에 대해 자세히 살펴보도록 하자.
+
+**DelegatingFilterProxy의 등장 이전**
+
+필터(Filter)는 서블릿이 제공하는 기술이므로 서블릿 컨테이너에 의해 생성되며 서블릿 컨테이너에 등록이 된다. 그렇기 때문에 스프링의 빈으로 등록도 불가능했으며, 빈을 주입받을 수 없었다.
+
+하지만 필터에서도 스프링 기술을 필요로 하는 상황이 발생하면서, 스프링 개발자는 필터도 스프링 빈을 주입받을 수 있도록 대안을 마련하였는데, 그것이 바로 DelegatingFilterProxy이다.
+
+**DelegatinFilterProxy의 등장 이후**
+
+Spring 1.2부터 DelegatingFilterProxy가 나오면서 서블릿 필터(Servlet Filter) 역시 스프링에서 관리가 가능해졌다. DelegatingFilterProxy는 서블릿 컨테이너에서 관리되는 프록시용 필터로써 우리가 만든 필터를 가지고 있다. 
+
+우리가 만든 필터는 스프링 컨테이너의 빈으로 등록되는데, 요청이 오면 DelegatingFilterProxy가 요청을 받아서 우리가 만든 필터(스프링 빈)에게 요청을 위임한다. 이러한 동작 원리를 쉽게 정리하면 다음과 같다.
+
+1. Filter 구현체가 스프링 빈으로 등록됨
+2. ServletContext가 Filter 구현체를 갖는 DelegatingFilterProxy를 생성함
+3. ServletContext가 DelegatingFilterProxy를 서블릿 컨테이너에 필터로 등록함
+4. 요청이 오면 DelegatingFilterProxy가 필터 구현체에게 요청을 위임하여 필터 처리를 진행함
+
+위의 DelegatingFilterProxy를 등록하는 과정은 Spring이기 때문에 필요한 것이고, SpringBoot라면 DelegatingFilterProxy조차 필요가 없다. 
+
+왜냐하면 SpringBoot가 내장 웹서버를 지원하면서 톰캣과 같은 서블릿 컨테이너까지 SpringBoot가 제어가능하기 때문이다. 
+
+그래서 SpringBoot에서는 ServletContext에 필터(Filter) 빈을 DelegatingFilterProxy로 감싸서 등록하지 않아도 된다. 
+
+SpringBoot가 서블릿 필터의 구현체 빈을 찾으면 DelegatingFilterProxy 없이 바로 필터 체인(Filter Chain)에 필터를 등록해주기 때문이다.
+
+실제로 필터에서 doFilter 호출 전에 런타임 예외를 발생시켜 로그를 출력해보면 이러한 내용을 확인해볼 수 있다. 
+
+## *토비의 스프링 Vol.1*
+
+[1장 오브젝트와 의존관계](https://www.notion.so/1-584689b08c3940299db98848f129b4d9?pvs=21)
+
+[4장 예외](https://www.notion.so/4-ece0d7a2969d46769fa350d73e443026?pvs=21)
+
+[7장 스프링 핵심 기술의 응용](https://www.notion.so/7-c8d91a825f924028947355fe137329d9?pvs=21)
+
+[2장 테스트](https://www.notion.so/2-50f0918cd21a4135914b11b1e8e947d4?pvs=21)
+
+[5장 서비스 추상화](https://www.notion.so/5-3f593cd27bbc45f79ff02cceaee446b8?pvs=21)
+
+[8장 스프링이란 무엇인가?](https://www.notion.so/8-9476603f6b3c44f599f0b5b176167fd5?pvs=21)
+
+[3장 템플릿](https://www.notion.so/3-7edaac10dee44a869216ab052f572a1d?pvs=21)
+
+[6장 AOP](https://www.notion.so/6-AOP-1c4978cd56794921a3c917e60a28a5d8?pvs=21)
+
+출처 : 토비의 스프링 Vol.1
+
+## *Reactive Spring*
+
+http://microservices.io/patterns
+
+### 기본 원리
+
+분산 시스템에서 구현되는 모든 비지니스의 핵심 가치는 응답성
+
+시스템이 높은 응답성을 확보한다는 것은 탄력성 및 복원력 같은 기본 기법을 다른다는 의미
+
+마지막으로 응답성, 탄력성 및 복원력을 모두 확보하는 기본적인 방법의 하나는 메세지 기반 통신을 사용하는 것
+
+이러한 원칙에 따라 구축된 시스템은 모든 구성 요소가 독립적이고 적절하게 격리돼 있기 때문에 유지 보수 및 확장이 매우 용이
+
+## *Spring Boot 3.x*
+
+[실전! Spring Boot 3 마이그레이션](https://techblog.lycorp.co.jp/ko/how-to-migrate-to-spring-boot-3)
