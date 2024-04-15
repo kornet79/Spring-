@@ -1,0 +1,209 @@
+---노션---
+https://incredible-guan-388.notion.site/Spring-Boot-9a815e4f02bc4231abb6e4426e94d2ab
+
+### Architecture
+
+- Presentation → Front-end → html/css/js
+- Business → Back-end → REST API
+- Data Source → Database → DBMS
+
+### Back-End
+
+- Layered Architecture
+    - UI Layer
+    - Application Layer
+    - Domain Layer
+    - Infrastructure Layer
+
+### REST API
+
+### CRUD
+
+Create, Read, Update, Delete
+
+                    ⇣⇣
+
+Post, Get, Put/Patch, Delete
+
+### URI, URL
+
+Uniform Resource Identifier(Locator)
+
+- **Resource**
+    - **Collection** : Read(list), Create
+        - http://host/restaurant
+    - **Member** : Read(Detail), Update, Delete
+        - http://host/restaurant/{id}
+        
+
+### JSON
+
+JavaScript Object Notation
+
+```json
+{
+	"id":2019,
+	"name":"식당",
+	"address":"골목"
+}
+```
+
+```json
+[
+	{
+		"id":2001,
+		"name":"오디세이",
+		"address":"우주"
+	},
+	{
+		"id":2019,
+		"name":"식당",
+		"address":"골목"
+	}
+]
+```
+
+### APIs
+
+- 가게 목록 GET/restaurants
+- 가게 상세 GET/restaurants/1
+- 가게 추가 POST/restaurants
+- 가게 수정 PATCH/restaurants/{id}
+- 가게 삭제 DELETE/restaurants/{id}
+
+### Httpie
+
+터미널 상에서 web데이터를 받아봄
+
+http GET localhost:8080
+
+http GET localhost:8080/restaurants
+
+http POST localhost:8080/restaurants name=BeRyong address=Busan
+
+http PATCH localhost:8080/restaurants/1/menuitems < menuitems.json
+
+## *문법*
+
+**Spring Initializer 기본세팅**
+
+**dependancies**
+
+- Spring Web Starter
+- Spring Boot DevTools
+- Lombok
+
+eatgo-api  directory 만들고 gradle build와 src폴더 이동
+
+main
+
+```java
+@SpringBootApplication // 스프링 부트 어플리케이션 시작
+
+@RestController // rest API 형식
+
+@Component // 자동 생성해 줄 수 있게 등록
+
+@Autowired // 자동으로 생성해줌(new RestaurantRepository)
+
+@Service // service layer
+
+@GetMapping("/restaurnats/{id}") // http 뒷부분
+public Restaurant detail(@PathVariable("id") Long id) {
+		Restaurant restaurant = restaurantService.getRestaurant(id);
+
+		return restaurant;
+}
+
+@PostMapping("/restaurants")
+public ResponseEntity<?> create(@Valid @RequestBody Restaurant resource)
+        throws URISyntaxException {
+    String name = resource.getName();
+    String address = resource.getAddress();
+    Restaurant restaurant = new Restaurant(1234L, name, address);
+    restaurantService.addRestaurant(restaurant);
+
+    URI location = new URI("/restaurants/" + restaurant.getId());
+    return ResponseEntity.created(location).body("{}");
+}
+
+@PatchMapping("/restaurants/{id}")
+public String update(@PathVariable("id") Long id,
+        @Valid @RequestBody Restaurant resource) {
+    String name = resource.getName();
+    String address = resource.getAddress();
+    restaurantService.updateRestaurant(id, name, address);
+
+    return "{}";
+}
+
+@CrossOrigin //cors : cross origin resource sharing 
+
+@Transient // jpa로 제어하지 않을 필드
+@Transactional // 객체의 변화를 DB에 적용
+
+// Lombok
+@Getter
+@Builder
+@NoArgsConstructor
+
+// validate
+@Valid
+@NotEmpty
+@NotNull
+
+// 예외
+@ControllerAdvice
+
+```
+
+test
+
+```java
+@SpringBootTest
+
+@RunWith(SpringRunner.class)
+
+@WebMvcTest(컨트롤러.class) // mvc 테스트 // json parsing
+public Class RestaurantControllerTest {}
+
+@MockBean(class명) // Test에서 가짜 객체 생성
+// service 객체
+
+@Mock // 가짜 객체 생성
+// repository
+Restaurant restaurant = new Restaurant(1234L, "BeRyong", "Busan");
+
+given().willReturn();
+
+/*
+ * @Mock (org.mockito.Mock)
+ * 다른 Mock Framework에도 있지만 대부분 mockito를 사용
+ * 
+ * @MockBean (org.springframework.boot.test.mock.mockito)
+ * 스프링 부트 테스트 안에 내장되어 있음
+ * 
+ * Spring Boot Container가 테스트 시에 필요하고
+ * Bean이 Container에 존재해야 한다면 @MockBean을 사용하고 그렇지 않다면 @Mock을 사용
+ */
+
+mvc.perform(post("/restaurants")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"name\":\"BeRyong\",\"address\":\"Busan\"}"))
+        .andExpect(status().isCreated())
+        .andExpect(header().string("location", "/restaurants/1234"))
+        .andExpect(content().string("{}"));
+
+verify(restaurantService).addRestaurant(any());
+```
+
+---
+
+### 생긴 문제들
+
+- sync 새로고침 해줘야 함
+- setting.gradle과 build.gradle 조사해야 함
+- 사용 문법이 달라서 이해가 필요함
+- root project내 sub project로 나누어서 프로그래밍
+
+[wwzpeople](https://cafe.naver.com/junes81/9476)
