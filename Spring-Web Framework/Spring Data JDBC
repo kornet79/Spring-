@@ -1,0 +1,27 @@
+----노션----
+https://incredible-guan-388.notion.site/Spring-Data-JDBC-47b061b7756f4159a3a85c925471076c?pvs=74
+
+## *JDBC*
+
+- 데이터베이스에 접근하기 위한 자바 표준 API
+- **`DriverManager`**를 사용하여 데이터 소스에 연결
+    - 드라이버 로딩, 연결, 연결 해제
+- 데이터베이스와 통신을 하기 위해 매번 동일한 작업을 수행
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/005238d8-358d-44aa-9fd0-fdeb1db99f22/2020-04-25T08_55_50.353image.png
+
+## *Spring JDBC*
+
+- 드라이버 로딩 , 연결, 해제 같은 작업을 **`JdbcTemplate`**에 맡김
+- 개발자는 쿼리문을 가지고 질의만 할 수 있음
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/7c6ab5fc-69d8-4610-ba98-c7dea764792e/2020-04-25T08_57_07.447image.png
+
+## *Spring Data JDBC*
+
+- 드라이버 관련 작업은 물론, 테이블과 객체를 맵핑하는 **상당히 많은 부분이 추상화** 되어 있음
+- **application.properties**에서 DataSource 설정을 할 수 있음
+- 클래스명이나 변수명으로 추측하여 객체와 테이블 맵핑
+- @Query 를 활용하여 메서드와 쿼리 맵핑
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/55529e16-0c89-4995-a861-d78d2739370f/2020-04-25T08_57_29.819image.png
