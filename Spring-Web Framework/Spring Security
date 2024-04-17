@@ -1,0 +1,98 @@
+---노션---
+https://incredible-guan-388.notion.site/Spring-Security-a7a0474542a74296b93de6a2c9c39e3c
+
+## *보안 용어*
+
+- **접근 주체(Principal)** : 보호된 리소스에 접근하는 대상
+- **인증(Authentication)** : 보호된 리소스에 접근한 대상에 대해 이 유저가 누구인지, 애플리케이션의 작업을 수행해도 되는 주체인지 확인하는 과정(ex. Form 기반 Login)
+- **인가(Authorize)** : 해당 리소스에 대해 접근 가능한 권한을 가지고 있는지 확인하는 과정(After Authentication, 인증 이후)
+- **권한(Authorization)** : 어떠한 리소스에 대한 접근 제한, 모든 리소스는 접근 제어 권한이 걸려있다. 즉, 인가 과정에서 해당 리소스에 대한 제한된 최소한의 권한을 가졌는지 확인한다.
+
+## *Spring Security란?*
+
+스프링 시큐리티는 스프링 기반의 애플리케이션의 보안(인증과 권한,인가 등)을 담당하는 스프링 하위 프레임워크이다. 주로 서블릿 필터와 이들로 구성된 필터체인으로의 위임모델을 사용한다. 그리고 보안과 관련해서 체계적으로 많은 옵션을 제공해주기 때문에 개발자 입장에서는 일일이 보안관련 로직을 작성하지 않아도 된다.
+
+![form 기반 로그인 flow](https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/e2cd1916-d45e-4660-b51a-a83d09bc300c/Untitled.png)
+
+form 기반 로그인 flow
+
+1. 사용자가 Form을 통해 로그인 정보를 입력하고 인증 요청을 보낸다.
+2. AuthenticationFilter(사용할 구현체 UsernamePasswordAuthenticationFilter)가 HttpServletRequest에서 사용자가 보낸 아이디와 패스워드를 인터셉트한다. 프론트 단에서 유효성검사를 할 수도 있지만, 무엇보다 안전! 안전을 위해서 다시 한번 사용자가 보낸 아이디와 패스워드의 유효성 검사를 해줄 수 있다.(아이디 혹은 패스워드가 null인 경우 등) HttpServletRequest에서 꺼내온 사용자 아이디와 패스워드를 진짜 인증을 담당할 AuthenticationManager 인터페이스(구현체 - ProviderManager)에게 인증용 객체(UsernamePasswordAuthenticationToken)로 만들어줘서 위임한다.
+3. AuthenticationFilter에게 인증용 객체(UsernamePasswordAuthenticationToken)을 전달받는다.
+4. 실제 인증을 할 AuthenticationProvider에게 Authentication객체(UsernamePasswordAuthenticationToken)을 다시 전달한다.
+5. DB에서 사용자 인증 정보를 가져올 UserDetailsService 객체에게 사용자 아이디를 넘겨주고 DB에서 인증에 사용할 사용자 정보(사용자 아이디, 암호화된 패스워드, 권한 등)를 UserDetails(인증용 객체와 도메인 객체를 분리하지 않기 위해서 실제 사용되는 도메인 객체에 UserDetails를 상속하기도 한다.)라는 객체로 전달 받는다.
+6. AuthenticationProvider는 UserDetails 객체를 전달 받은 이후 실제 사용자의 입력정보와 UserDetails 객체를 가지고 인증을 시도한다
+7. 8. 9. 10. 인증이 완료되면 사용자 정보를 가진 Authentication 객체를 SecurityContextHolder에 담은 이후 AuthenticationSuccessHandle를 실행한다.(실패시 AuthenticationFailureHandler를 실행한다.)
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/e5553123-58bc-45db-923b-30928be09bd6/Untitled.png
+
+[로그인 과정으로 살펴보는 스프링 시큐리티 아키텍처(Spring Security Architecture)](https://jeong-pro.tistory.com/205)
+
+## *문법*
+
+- Security Configuration
+    
+    ```java
+    package com.swchoi.webservice.springboot.config.auth;
+    
+    import com.swchoi.webservice.springboot.domain.user.Role;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+    
+    @RequiredArgsConstructor
+    @EnableWebSecurity
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    
+       private final CustomOAuth2UserService customOAuth2UserService;
+    
+       @Override
+       protected void configure(HttpSecurity http) throws Exception {
+           http
+                   .csrf().disable()
+                   .headers().frameOptions().disable() 
+                   .and()
+                       .authorizeRequests()
+                       .antMatchers("/", "/css/**", "/images/**",
+                               "/js/**", "/h2-console/**").permitAll()
+                       .antMatchers("/api/v1/**").hasRole(Role.
+                                                        USER.name())
+                       .anyRequest().authenticated()
+                   .and()
+                       .logout()
+                           .logoutSuccessUrl("/")
+                   .and()
+                       .oauth2Login()
+                           .userInfoEndpoint()
+                               .userService(customOAuth2UserService);
+       }
+    }
+    ```
+    
+    1. **@EnableWebSecurity**
+        - Spring Security 설정들을 활성화시켜 줍니다.
+    2. **.csrf().disable().headers().frameOptions().disable()**
+        - h2-console 화면을 사용하기 위해 해당 옵션들을 disable 합니다.
+    3. **authorizeRequests**
+        - URL별 권한 관리를 설정하는 옵션의 시작점입니다.
+        - authorizeRequests가 선언되어야만 antMatchers 옵션을 사용할 수 있습니다.
+    4. **antMatchers**
+        - 권한 관리 대상을 지정하는 옵션입니다.
+        - URL, HTTP 메소드별로 관리가 가능합니다.
+        - "/"등 지정된 URL들은 permitAll() 옵션을 통해 전체 열람 권한을 주었습니다.
+        - "/api/v1/**"주소를 가진 API는 USER 권한을 가진 사람만 가능하도록 했습니다.
+    5. **anyRequest**
+        - 설정된 값들 이외 나머지 URL들을 나타냅니다.
+        - 여기서는 authenticated()을 추가하여 나머지 URL들은 모두 인증된 사용자들에게만 허용하게 됩니다.
+        - 인증된 사용자 즉, 로그인한 사용자들은 이야기합니다.
+    6. **logout().logoutSuccessUrl("/")**
+        - 로그아웃 기능에 대한 여러 설정의 진입점입니다.
+        - 로그아웃 성공 시 / 주소로 이동합니다.
+    7. **oauth2Login**
+        - OAuth 2 로그인 기능에 대한 여러 설정의 진입점입니다.
+    8. **userInfoEndpoint**
+        - OAuth 2 로그인 성공 이후 사용자 정보를 가져올 때의 설정들을 담당합니다.
+    9. **userService**
+        - 소셜 로그인 성공 시 후속 조치를 진행할 UserService 인터페이스의 구현체를 등록합니다.
+        - 리소스 서버(즉, 소셜 서비스들)에서 사용자 정보를 가져온 상태에서 추가로 진행하고자 하는 기능을 명시할 수 있습니다.
