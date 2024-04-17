@@ -1,0 +1,341 @@
+---노션---
+https://incredible-guan-388.notion.site/Spring-Security-a7a0474542a74296b93de6a2c9c39e3c?pvs=74
+
+> 배치(Batch)는 **일괄처리** 란 뜻을 갖고 있습니다.
+> 
+
+## 배치 어플리케이션
+
+개발자가 정의한 작업을 한번에 일괄 처리하는, 단발성으로 대용량의 데이터를 처리하는 어플리케이션
+
+- 일정 주기로 실행해야 할 때
+- 실시간 처리가 어려운 대량의 데이터를 처리해야 할 때
+    - 이런 작업을 하나의 어플리케이션에서 수행하면 성능 저하를 유발할 수 있으니 배치 어플리케이션을 구현한다.
+
+### 조건
+
+- **대용량 데이터** : 배치 어플리케이션은 대량의 데이터를 가져오거나, 전달하거나, 계산하는 등의 처리를 할 수 있어야 합니다.
+- **자동화** : 배치 어플리케이션은 심각한 문제 해결을 제외하고는 사용자 개입 없이 실행되어야 합니다.
+- **견고성** : 배치 어플리케이션은 잘못된 데이터를 충돌/중단 없이 처리할 수 있어야 합니다.
+- **신뢰성** : 배치 어플리케이션은 무엇이 잘못되었는지를 추적할 수 있어야 합니다. (로깅, 알림)
+- **성능** : 배치 어플리케이션은 지정한 시간 안에 처리를 완료하거나 동시에 실행되는 다른 어플리케이션을 방해하지 않도록 수행되어야합니다.
+
+[1. Spring Batch 가이드 - 배치 어플리케이션이란?](https://jojoldu.tistory.com/324)
+
+## 구조
+
+Spring Batch에서 **Job은 하나의 배치 작업 단위**
+
+Job 안에는 아래처럼 여러 Step이 존재하고, Step 안에 Tasklet 혹은 Reader & Processor & Writer 묶음이 존재
+
+https://t1.daumcdn.net/cfile/tistory/99E8E3425B66BA2713
+
+**Tasklet 하나와 Reader & Processor & Writer 한 묶음이 같은 레벨**
+
+그래서 **Reader & Processor가 끝나고 Tasklet으로 마무리 짓는 등으로 만들순 없음**
+
+> Tasklet은 어찌보면 Spring MVC의 `@Component`, `@Bean`과 비슷한 역할이라고 보셔도 될 것 같음
+명확한 역할은 없지만, 개발자가 지정한 커스텀한 기능을 위한 단위
+> 
+
+```java
+@Slf4j // log 사용을 위한 lombok 어노테이션
+@RequiredArgsConstructor // 생성자 DI를 위한 lombok 어노테이션
+@Configuration
+public class SimpleJobConfiguration {
+    private final JobBuilderFactory jobBuilderFactory; // 생성자 DI 받음
+    private final StepBuilderFactory stepBuilderFactory; // 생성자 DI 받음
+
+    @Bean
+    public Job simpleJob() {
+        return jobBuilderFactory.get("simpleJob")
+                .start(simpleStep1())
+                .build();
+    }
+
+    @Bean
+    public Step simpleStep1() {
+        return stepBuilderFactory.get("simpleStep1")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> This is Step1");
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+}
+```
+
+## 문법
+
+## **Job**
+
+### **next()**
+
+next()는 순차적으로 Step들 연결시킬때 사용
+
+### **조건별 흐름제어**
+
+**앞의 step에서 오류가 나면 나머지 뒤에 있는 step 들은 실행되지 못함**
+
+하지만 상황에 따라 **정상일때는 Step B로, 오류가 났을때는 Step C로 수행해야할 때가 있음**
+
+https://t1.daumcdn.net/cfile/tistory/99F9F0455B6FC6BB31
+
+```java
+@Slf4j
+@Configuration
+@RequiredArgsConstructor
+public class StepNextConditionalJobConfiguration {
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+
+    @Bean
+    public Job stepNextConditionalJob() {
+        return jobBuilderFactory.get("stepNextConditionalJob")
+                .start(conditionalJobStep1())
+                    .on("FAILED") // FAILED 일 경우
+                    .to(conditionalJobStep3()) // step3으로 이동한다.
+                    .on("*") // step3의 결과 관계 없이 
+                    .end() // step3으로 이동하면 Flow가 종료한다.
+                .from(conditionalJobStep1()) // step1로부터
+                    .on("*") // FAILED 외에 모든 경우
+                    .to(conditionalJobStep2()) // step2로 이동한다.
+                    .next(conditionalJobStep3()) // step2가 정상 종료되면 step3으로 이동한다.
+                    .on("*") // step3의 결과 관계 없이 
+                    .end() // step3으로 이동하면 Flow가 종료한다.
+                .end() // Job 종료
+                .build();
+    }
+
+    @Bean
+    public Step conditionalJobStep1() {
+        return stepBuilderFactory.get("step1")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> This is stepNextConditionalJob Step1");
+
+                    /**
+                        ExitStatus를 FAILED로 지정한다.
+                        해당 status를 보고 flow가 진행된다.
+                    **/
+                    contribution.setExitStatus(ExitStatus.FAILED);
+
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+
+    @Bean
+    public Step conditionalJobStep2() {
+        return stepBuilderFactory.get("conditionalJobStep2")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> This is stepNextConditionalJob Step2");
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+
+    @Bean
+    public Step conditionalJobStep3() {
+        return stepBuilderFactory.get("conditionalJobStep3")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> This is stepNextConditionalJob Step3");
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+}
+```
+
+### Decide
+
+**Step들의 Flow속에서 분기만 담당하는 타입**
+
+- Step이 담당하는 역할이 2개 이상이 됩니다.
+    - 실제 해당 Step이 처리해야할 로직외에도 분기처리를 시키기 위해 ExitStatus 조작이 필요합니다.
+- 다양한 분기 로직 처리의 어려움
+    - ExitStatus를 커스텀하게 고치기 위해선 Listener를 생성하고 Job Flow에 등록하는 등 번거로움이 존재합니다.
+
+```java
+@Slf4j
+@Configuration
+@RequiredArgsConstructor
+public class DeciderJobConfiguration {
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+
+    @Bean
+    public Job deciderJob() {
+        return jobBuilderFactory.get("deciderJob")
+                .start(startStep())
+                .next(decider()) // 홀수 | 짝수 구분
+                .from(decider()) // decider의 상태가
+                    .on("ODD") // ODD라면
+                    .to(oddStep()) // oddStep로 간다.
+                .from(decider()) // decider의 상태가
+                    .on("EVEN") // ODD라면
+                    .to(evenStep()) // evenStep로 간다.
+                .end() // builder 종료
+                .build();
+    }
+
+    @Bean
+    public Step startStep() {
+        return stepBuilderFactory.get("startStep")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> Start!");
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+
+    @Bean
+    public Step evenStep() {
+        return stepBuilderFactory.get("evenStep")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> 짝수입니다.");
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+
+    @Bean
+    public Step oddStep() {
+        return stepBuilderFactory.get("oddStep")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> 홀수입니다.");
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+
+    @Bean
+    public JobExecutionDecider decider() {
+        return new OddDecider();
+    }
+
+    public static class OddDecider implements JobExecutionDecider {
+
+        @Override
+        public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
+            Random rand = new Random();
+
+            int randomNumber = rand.nextInt(50) + 1;
+            log.info("랜덤숫자: {}", randomNumber);
+
+            if(randomNumber % 2 == 0) {
+                return new FlowExecutionStatus("EVEN");
+            } else {
+                return new FlowExecutionStatus("ODD");
+            }
+        }
+    }
+}
+```
+
+### JobParameter
+
+Spring Batch의 경우 외부 혹은 내부에서 파라미터를 받아 여러 Batch 컴포넌트에서 사용할 수 있게 지원하고 있음
+
+이 파라미터를 **Job Parameter** 라고 함
+
+Job Parameter를 사용하기 위해선 항상 Spring Batch 전용 Scope를 선언해야만 함
+
+크게 `@StepScope`와 `@JobScope` 2가지가 있음
+
+```java
+@Value("#{jobParameters[파라미터명]}")
+```
+
+> jobParameters 외에도 jobExecutionContext, stepExecutionContext 등도 SpEL로 사용할 수 있음
+@JobScope에선 stepExecutionContext는 사용할 수 없고, jobParameters와 jobExecutionContext만 사용할 수 있음
+> 
+
+```java
+@Slf4j
+@RequiredArgsConstructor 
+@Configuration
+public class SimpleJobConfiguration {
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+
+    @Bean
+    public Job simpleJob() {
+        return jobBuilderFactory.get("simpleJob")
+                .start(simpleStep1(null))
+                .next(simpleStep2(null))
+                .build();
+    }
+
+    @Bean
+    @JobScope
+    public Step simpleStep1(@Value("#{jobParameters[requestDate]}") String requestDate) {
+        return stepBuilderFactory.get("simpleStep1")
+                .tasklet((contribution, chunkContext) -> {
+										log.info(">>>>> This is Step1");
+                    log.info(">>>>> requestDate = {}", requestDate);
+                })
+                .build();
+    }
+
+    @Bean
+    @JobScope
+    public Step simpleStep2(@Value("#{jobParameters[requestDate]}") String requestDate) {
+        return stepBuilderFactory.get("simpleStep2")
+                .tasklet((contribution, chunkContext) -> {
+                    log.info(">>>>> This is Step2");
+                    log.info(">>>>> requestDate = {}", requestDate);
+                    return RepeatStatus.FINISHED;
+                })
+                .build();
+    }
+}
+```
+
+현재 Job Parameter의 타입으로 사용할 수 있는 것은 `Double`, `Long`, `Date`, `String` 이 있음
+
+아쉽지만 `LocalDate`와 `LocalDateTime`이 없어 `String` 으로 받아 타입변환을 해서 사용해야만 함
+
+예제 코드를 보시면 호출하는 쪽에서 `null` 를 할당하고 있는데요.이는 **Job Parameter의 할당이 어플리케이션 실행시에 하지 않기 때문에** 가능함
+
+### `@StepScope` & `JobScope`
+
+`@StepScope`를 사용하게 되면 Spring Batch가 Spring 컨테이너를 통해 지정된 **Step의 실행시점에 해당 컴포넌트를 Spring Bean으로 생성함**
+
+마찬가지로 `@JobScope`는 **Job 실행시점**에 Bean이 생성 됨
+
+즉, **Bean의 생성 시점을 지정된 Scope가 실행되는 시점으로 지연**시킴
+
+이렇게 Bean의 생성시점을 어플리케이션 실행 시점이 아닌, Step 혹은 Job의 실행시점으로 지연시키면서 얻는 장점은 크게 2가지가 있음
+
+- JobParameter의 Late Binding이 가능함
+    - Job Parameter가 StepContext 또는 JobExecutionContext 레벨에서 할당시킬 수 있음
+    꼭 Application이 실행되는 시점이 아니더라도 Controller나 Service와 같은 **비지니스 로직 처리 단계에서 Job Parameter를 할당**시킬 수 있음
+- 동일한 컴포넌트를 병렬 혹은 동시에 사용할때 유용함
+    - Step 안에 Tasklet이 있고, 이 Tasklet은 멤버 변수와 이 멤버 변수를 변경하는 로직이 있다고 가정
+    이 경우 `@StepScope` 없이 Step을 병렬로 실행시키게 되면 **서로 다른 Step에서 하나의 Tasklet을 두고 마구잡이로 상태를 변경**하려고 할 것
+    하지만 `@StepScope`가 있다면 **각각의 Step에서 별도의 Tasklet을 생성하고 관리하기 때문에 서로의 상태를 침범할 일이 없음**
+
+**@StepScope, @JobScope Bean을 생성할때만 Job Parameters가 생성되기 때문에 사용할 수 있습니다.**
+
+## Chunk
+
+**데이터 덩어리로 작업 할 때 각 커밋 사이에 처리되는 row 수**
+
+- 즉, Chunk 지향 처리란 한 번에 하나씩 데이터를 읽어 Chunk라는 덩어리를 만든 뒤, Chunk 단위로 트랜잭션을 다루는 것을 의미
+- Chunk 단위로 트랜잭션을 수행하기 때문에 **실패할 경우엔 해당 Chunk 만큼만 롤백**이 되고, 이전에 커밋된 트랜잭션 범위까지는 반영이 된다는 것
+    
+    https://t1.daumcdn.net/cfile/tistory/999A513E5B814C4A12
+    
+    - Reader에서 데이터를 하나 읽어옴
+    - 읽어온 데이터를 Processor에서 가공
+    - 가공된 데이터들을 별도의 공간에 모은 뒤, Chunk 단위만큼 쌓이게 되면 Writer에 전달하고 Writer는 일괄 저장
+    - **Reader와 Processor에서는 1건씩 다뤄지고, Writer에선 Chunk 단위로 처리**
+
+## *메타 데이터*
+
+### schema-mysql.sql로 테이블 생성
+
+- 버전마다 다르기 때문에 해당 버전에 맞는 sql을 사용하여 생성해야함
+    - batch_job_instance duplicate entry '0' for key 'primary' 에러 발생
+
+[3. Spring Batch 가이드 - 메타테이블엿보기](https://jojoldu.tistory.com/326?category=902551) 이거 참고
