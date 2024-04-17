@@ -1,0 +1,28 @@
+---노션---
+https://incredible-guan-388.notion.site/Spring-Cloud-Gateway-5431d92e7b4a441d9ce36996af421a7f
+
+config server
+
+## *목표*
+
+이 프로젝트는 Spring 5, Spring Boot 2 및 Project Reaactor를 포함하는 스프링 생태계 위에 구축된 API Gateway를 제공합니다. 
+
+Spring Cloud Gateway는 API 라우팅 및 보안, 모니터링/메트릭, 탄력성과 같은 크로스커팅 관심사를 해결하는 간단하지만 효과적인 방법을 제공하는 것을 목표로 합니다.
+
+## *용어*
+
+- **Route(경로) :** 게이트웨이의 기본 빌딩 블록을 라우팅합니다. 이것은 ID, 목적지 URI, 조건부(predicate)의 집합 및 필터들의 집합으로 정의됩니다. 종합(aggregate)된 조건부가 참일 경우 경로를 매치합니다.
+- **Predicate(조건부)** : 이것은 Java 8 의 Function Predicate 입니다. 입력 유형은 Spring Framework SeverWebExchange 입니다. 개발자가 헤더나 파라미터 등과 같은 HTTP 요청으로부터 어떤 것이든 매치할 수 있도록 해 줍니다.
+- **Filter(필터)** : 특정한 factory 로 생성된 Spring Framework GatewayFilter 인스턴스입니다. 이곳에서 내려보내기(downstream) 요청을 보내기 전후에 변경을 가할 수 있습니다.
+
+## *동작*
+
+!https://prod-files-secure.s3.us-west-2.amazonaws.com/a156cc82-d201-4160-ac40-16f8ab23f7dc/ddd555a1-ed8e-4f4c-960b-0ead8ec5158d/.png
+
+클라이언트는 Spring Cloud Gateway 로 요청을 합니다. Gateway Handler Mapping 이 Route에 일치하는 요청이라고 판단하면, Gateway Web Handler 로 보냅니다. 
+
+이 핸들러는 요청과 관련된 filter chain 을 통해 요청을 보냅니다. 필터가 점선으로 구분된 이유는, 필터는 proxy 요청이 보내지기 전 / 후로 로직을 실행하기 때문입니다. 모든 "사전" 필터 로직이 실행 된 후, Proxy 요청이 만들어 집니다. 프록시 요청이 만들어지면 "사후" 필터 로직이 실행됩니다.
+
+**참고 : 포트 없는 Route 로 규정된 URI는 HTTP나 HTTPS에 따라 80 혹은 443 포트를 기본적으로 가집니다**
+
+[Spring Cloud Gateway 2.1.0RELEASE 레퍼런스](https://springboot.cloud/26)
